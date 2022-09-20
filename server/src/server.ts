@@ -263,7 +263,7 @@ documents.onDidChangeContent(change => {
 
 
     }
-    catch (ex) {
+    catch (ex:any) {
         connection.console.log(ex);
     }
 });
@@ -286,17 +286,17 @@ function validateTextDocument() {
         const tmpPreprocessor2 = new TibboBasicPreprocessor(workspaceRoot, PLATFORMS_PATH);
         tmpPreprocessor1.originalFiles[currentFilePath] = preprocessor.originalFiles[currentFilePath];
         tmpPreprocessor2.originalFiles[currentFilePath] = text;
-        tmpPreprocessor1.parseFile(dirName, path.basename(currentFilePath), true);
-        tmpPreprocessor2.parseFile(dirName, path.basename(currentFilePath), true);
+        //tmpPreprocessor1.parseFile(dirName, path.basename(currentFilePath), true);
+        //tmpPreprocessor2.parseFile(dirName, path.basename(currentFilePath), true);
 
-        if (JSON.stringify(tmpPreprocessor1.defines) != JSON.stringify(tmpPreprocessor2.defines)) {
+        //if (JSON.stringify(tmpPreprocessor1.defines) != JSON.stringify(tmpPreprocessor2.defines)) {
             needsUpdate = true;
             preprocessor.originalFiles[currentFilePath] = text;
-        }
+       // }
         delete fileEdits[key];
         if (!needsUpdate) {
             preprocessor.originalFiles[currentFilePath] = text;
-            preprocessor.parseFile(dirName, path.basename(currentFilePath), true);
+            //preprocessor.parseFile(dirName, path.basename(currentFilePath), true);
             projectParser.parseFile(currentFilePath, text);
         }
     }
@@ -344,7 +344,7 @@ function validateTextDocument() {
                 if (tpr[entryName]['location'] == 'commonlib') {
                     directory = PLATFORMS_PATH;
                 }
-                filePath = preprocessor.parseFile(directory, originalFilePath, needsUpdate);
+                //filePath = preprocessor.parseFile(directory, originalFilePath, needsUpdate);
 
                 const fileContents = preprocessor.files[filePath];
                 projectParser.parseFile(filePath, fileContents);
@@ -360,7 +360,7 @@ function validateTextDocument() {
 
     }
     catch (ex) {
-        connection.console.log(ex.stack);
+        connection.console.log(""+ex);
     }
     finally {
         parsing = false;
@@ -1335,7 +1335,7 @@ function parseFile(fileUri: string) {
     const filePath = getFileName(fileUri);
     const dirName = path.dirname(filePath);
 
-    preprocessor.parseFile(dirName, path.basename(filePath));
+    //preprocessor.parseFile(dirName, path.basename(filePath));
     const fileContents = preprocessor.files[filePath];
     projectParser.parseFile(filePath, fileContents);
 }
