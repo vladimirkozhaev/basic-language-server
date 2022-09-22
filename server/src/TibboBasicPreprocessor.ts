@@ -45,8 +45,8 @@ export default class TibboBasicPreprocessor {
         this.codes = {};
         this.defines = {};
         //parse platforms
-        const currentPath = path.join(this.platformsPath, this.platformType);
-        this.parseFile(currentPath, this.platformType + '.tph');
+        //const currentPath = path.join(this.platformsPath, this.platformType);
+        //this.parseFile(currentPath, this.platformType + '.tph');
     }
 
     getFilePath(currentDirectory: string, filePath: string): string {
@@ -72,42 +72,42 @@ export default class TibboBasicPreprocessor {
         return filePath;
     }
 
-    parseFile(currentDirectory: string, filePath: string, update = false): string {
-        filePath = this.getFilePath(currentDirectory, filePath);
-        if (this.files[filePath] && !update) {
-            return filePath;
-        }
-        let deviceRootFile = '';
-        if (this.originalFiles[filePath] == undefined) {
-            this.filePriorities.push(filePath);
-            deviceRootFile = fs.readFileSync(filePath, 'utf-8');
-            this.originalFiles[filePath] = deviceRootFile;
-        }
-        deviceRootFile = this.originalFiles[filePath];
-        const chars = new antlr4.InputStream(deviceRootFile);
-        chars.name = filePath;
-        let blankFile = this.originalFiles[filePath];
-        blankFile = blankFile.replace(/[^\r\n\t]/g, ' ');
-        this.files[filePath] = blankFile;
-        this.codes[filePath] = [];
-        const lexer = new TibboBasicPreprocessorLexer(chars);
-        const tokens = new antlr4.CommonTokenStream(lexer);
-        const parser = new TibboBasicPreprocessorParser(tokens);
-        parser.buildParseTrees = true;
-        const errorListener = new TibboBasicErrorListener();
-        lexer.removeErrorListeners();
-        // lexer.addErrorListener(errorListener);
-        parser.removeErrorListeners();
-        parser.addErrorListener(errorListener);
-        const tree = parser.preprocessor();
+    // parseFile(currentDirectory: string, filePath: string, update = false): string {
+    //     filePath = this.getFilePath(currentDirectory, filePath);
+    //     if (this.files[filePath] && !update) {
+    //         return filePath;
+    //     }
+    //     let deviceRootFile = '';
+    //     if (this.originalFiles[filePath] == undefined) {
+    //         this.filePriorities.push(filePath);
+    //         deviceRootFile = fs.readFileSync(filePath, 'utf-8');
+    //         this.originalFiles[filePath] = deviceRootFile;
+    //     }
+    //     deviceRootFile = this.originalFiles[filePath];
+    //     const chars = new antlr4.InputStream(deviceRootFile);
+    //     chars.name = filePath;
+    //     let blankFile = this.originalFiles[filePath];
+    //     blankFile = blankFile.replace(/[^\r\n\t]/g, ' ');
+    //     this.files[filePath] = blankFile;
+    //     this.codes[filePath] = [];
+    //     //const lexer = new TibboBasicPreprocessorLexer(chars);
+    //     //const tokens = new antlr4.CommonTokenStream(lexer);
+    //     //const parser = new TibboBasicPreprocessorParser(tokens);
+    //     //parser.buildParseTrees = true;
+    //     const errorListener = new TibboBasicErrorListener();
+    //     //lexer.removeErrorListeners();
+    //     // lexer.addErrorListener(errorListener);
+    //     //parser.removeErrorListeners();
+    //     //parser.addErrorListener(errorListener);
+    //     //const tree = parser.preprocessor();
 
-        const preprocessor = new PreprocessorListener(filePath, this, chars);
-        antlr4.tree.ParseTreeWalker.DEFAULT.walk(preprocessor, tree);
-        if (errorListener.errors.length > 0) {
-            // console.log(errorListener.errors);
-        }
-        return filePath;
-    }
+    //     const preprocessor = new PreprocessorListener(filePath, this, chars);
+    //     //antlr4.tree.ParseTreeWalker.DEFAULT.walk(preprocessor, tree);
+    //     if (errorListener.errors.length > 0) {
+    //         // console.log(errorListener.errors);
+    //     }
+    //     return filePath;
+    // }
 }
 
 interface PreprocessorEvaluationBlock {
@@ -187,7 +187,7 @@ export class PreprocessorListener extends TibboBasicPreprocessorParserListener {
             if (filePath == 'global.tbh') {
                 return;
             }
-            this.preprocessor.parseFile(path.dirname(this.filePath), filePath, true);
+            //this.preprocessor.parseFile(path.dirname(this.filePath), filePath, true);
         }
     }
 

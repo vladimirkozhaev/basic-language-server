@@ -49,16 +49,15 @@ export default class TibboBasicProjectParser {
 
         this.resetFileSymbols(filePath);
 
-        // console.log(`Parsing ${filePath}`);
         const chars = new antlr4.InputStream(deviceRootFile);
+        const errorListener = new TibboBasicErrorListener();
         chars.name = filePath;
         const lexer = new TibboBasicLexer(chars);
         const tokens = new antlr4.CommonTokenStream(lexer);
         const parser = new TibboBasicParser(tokens);
         parser.buildParseTrees = true;
-        const errorListener = new TibboBasicErrorListener();
         lexer.removeErrorListeners();
-        // lexer.addErrorListener(errorListener);
+        lexer.addErrorListener(errorListener);
         parser.removeErrorListeners();
         parser.addErrorListener(errorListener);
         const tree = parser.startRule();
@@ -67,10 +66,11 @@ export default class TibboBasicProjectParser {
 
 
         const listener = new ParserListener(this);
+        
         antlr4.tree.ParseTreeWalker.DEFAULT.walk(listener, tree);
-        if (errorListener.errors.length > 0) {
-            // console.log(errorListener.errors);
-        }
+        // if (errorListener.errors.length > 0) {
+        //      console.log(`we have errors in the file ${filePath}`,errorListener.errors);
+        // }
         this.errors[filePath] = errorListener.errors;
 
         // const t2 = new Date().getTime();

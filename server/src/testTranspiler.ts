@@ -45,7 +45,7 @@ async function getFiles(dir) {
     for (let i = 0; i < files.length; i++) {
         try {
             const filePath = files[i];
-            console.log('parsing ' + filePath);
+            
             const contents = fs.readFileSync(filePath, 'utf-8');
             const output = transpiler.parseFile(contents);
             let outputExtension = '.tc';

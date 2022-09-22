@@ -29,6 +29,7 @@ import {
     ReferenceParams,
     Location
 } from 'vscode-languageserver';
+
 import {
     createConnection,
 } from 'vscode-languageserver/node';
@@ -72,7 +73,7 @@ let projectParser: TibboBasicProjectParser;
 const fileEdits: { [name: string]: string } = {};
 
 let PLATFORMS_PATH = 'Platforms';
-let tprPath = '';
+//let tprPath = '';
 let parsing = false;
 let needsUpdate = false;
 let platformsChanged = true;
@@ -115,22 +116,22 @@ connection.onInitialize(async (params: InitializeParams) => {
         }
     }
 
-    if (workspaceRoot) {
-        fs.readdirSync(workspaceRoot).forEach(file => {
-            const ext = path.extname(file);
-            if (ext == '.tpr') {
-                if (workspaceRoot) {
-                    tprPath = path.join(workspaceRoot, file);
-                }
-            }
-        });
-    }
-    if (tprPath == '') {
-        return {
-            capabilities: {
-            }
-        };
-    }
+    // if (workspaceRoot) {
+    //     fs.readdirSync(workspaceRoot).forEach(file => {
+    //         const ext = path.extname(file);
+    //         if (ext == '.tpr') {
+    //             if (workspaceRoot) {
+    //                 tprPath = path.join(workspaceRoot, file);
+    //             }
+    //         }
+    //     });
+    // }
+    // if (tprPath == '') {
+    //     return {
+    //         capabilities: {
+    //         }
+    //     };
+    // }
 
     await new Promise<void>((resolve, reject) => {
         preprocessor = new TibboBasicPreprocessor(workspaceRoot, PLATFORMS_PATH);
@@ -263,7 +264,7 @@ documents.onDidChangeContent(change => {
 
 
     }
-    catch (ex:any) {
+    catch (ex: any) {
         connection.console.log(ex);
     }
 });
@@ -290,9 +291,9 @@ function validateTextDocument() {
         //tmpPreprocessor2.parseFile(dirName, path.basename(currentFilePath), true);
 
         //if (JSON.stringify(tmpPreprocessor1.defines) != JSON.stringify(tmpPreprocessor2.defines)) {
-            needsUpdate = true;
-            preprocessor.originalFiles[currentFilePath] = text;
-       // }
+        needsUpdate = true;
+        preprocessor.originalFiles[currentFilePath] = text;
+        // }
         delete fileEdits[key];
         if (!needsUpdate) {
             preprocessor.originalFiles[currentFilePath] = text;
@@ -300,7 +301,7 @@ function validateTextDocument() {
             projectParser.parseFile(currentFilePath, text);
         }
     }
-    
+
     if (updated) {
         notifyDiagnostics();
         getProjectStructure();
@@ -317,6 +318,7 @@ function validateTextDocument() {
             platformPreprocessor = new TibboBasicPreprocessor(workspaceRoot, PLATFORMS_PATH);
             platformProjectParser = new TibboBasicProjectParser();
             platformPreprocessor.parsePlatforms();
+
             for (const filePath in platformPreprocessor.files) {
                 const fileContents = platformPreprocessor.files[filePath];
                 platformProjectParser.parseFile(filePath, fileContents);
@@ -327,40 +329,41 @@ function validateTextDocument() {
         copyProperties();
 
         //parse tpr file
-        const tpr = ini.parse(fs.readFileSync(tprPath, 'utf-8'));
+        //const tpr = ini.parse(fs.readFileSync(tprPath, 'utf-8'));
         const max = 999;
-        const dirName = path.dirname(tprPath);
-        for (let i = 1; i < max; i++) {
-            const entryName = 'file' + i.toString();
-            if (tpr[entryName] != undefined) {
-                const originalFilePath = tpr[entryName]['path'].split('\\').join(path.sep);
-                let filePath = originalFilePath;
+        const dirName = workspaceRoot;
+        //path.dirname(tprPath);
+        const fs = require('fs');
+        const path = require('node:path')
+        fs.readdirSync(dirName).forEach(file => {
+            //console.log(file);
+            const filePath = path.join(dirName, file)
+            
+            //const entryName = 'file' + i.toString();
+            //if (tpr[entryName] != undefined) {
+            //const originalFilePath = tpr[entryName]['path'].split('\\').join(path.sep);
+            // let filePath = originalFilePath;
 
-                const ext = path.extname(filePath);
-                if (!supportedFileTypes.includes(ext)) {
-                    continue;
-                }
+            const ext = path.extname(file);
+           
+            if (supportedFileTypes.includes(ext)) {
+
                 let directory = dirName;
-                if (tpr[entryName]['location'] == 'commonlib') {
-                    directory = PLATFORMS_PATH;
-                }
-                //filePath = preprocessor.parseFile(directory, originalFilePath, needsUpdate);
-
+                
+                preprocessor.files[filePath] = fs.readFileSync(filePath, 'utf-8')
                 const fileContents = preprocessor.files[filePath];
+                console.log("ext",ext,"filePath",filePath)
+                //console.log(fileContents)
                 projectParser.parseFile(filePath, fileContents);
-
-
             }
-            else {
-                break;
-            }
-        }
+
+        })
         projectParser.constructComments();
 
 
     }
     catch (ex) {
-        connection.console.log(""+ex);
+        connection.console.log("" + ex);
     }
     finally {
         parsing = false;
@@ -743,7 +746,7 @@ connection.onHover(({ textDocument, position }): Hover | undefined => {
                     }
                 }
 
-                
+
                 break;
         }
     }
@@ -845,7 +848,7 @@ connection.onDefinition(({ textDocument, position }): Definition | undefined => 
                 break;
             case TibboBasicParser.STRINGLITERAL:
                 if (token.parentCtx.ruleIndex == TibboBasicParser.RULE_includeStmt) {
-                    const dirName = path.dirname(tprPath);
+                    const dirName = workspaceRoot;//path.dirname(tprPath);
                     let filePath = token.getText().replace(/"/g, '').split('\\').join(path.sep);
                     filePath = preprocessor.getFilePath(dirName, filePath);
                     return {
@@ -1350,12 +1353,13 @@ function notifyDiagnostics() {
             for (let i = 0; i < projectParser.errors[filePath].length; i++) {
 
                 const parserError = projectParser.errors[filePath][i];
+                console.log("parserError.symbol:",parserError.symbol)
                 const diagnostic: Diagnostic = {
                     severity: DiagnosticSeverity.Error,
                     range: {
-                        start: { line: parserError.symbol.line - 1, character: parserError.symbol.column },
+                        start: { line: parserError.line - 1, character: parserError.column },
                         // end: doc.positionAt(parserError.symbol.stop)
-                        end: { line: parserError.symbol.line - 1, character: parserError.symbol.column + (parserError.symbol.stop - parserError.symbol.start) + 1 }
+                        end: { line: parserError.line - 1, character: parserError.column + 1 }
                     },
                     message: parserError.message,
                     source: 'ex'
