@@ -27,7 +27,8 @@ import {
     PrepareRenameParams,
     DocumentSymbol,
     ReferenceParams,
-    Location
+    Location,
+    DiagnosticTag
 } from 'vscode-languageserver';
 
 import {
@@ -205,17 +206,7 @@ connection.onInitialized(async (params) => {
 // let documentSettings: Map<string, Thenable<ExampleSettings>> = new Map();
 
 connection.onDidChangeConfiguration(change => {
-    if (hasConfigurationCapability) {
-        // Reset all cached document settings
-        // documentSettings.clear();
-    } else {
-        // globalSettings = <ExampleSettings>(
-        // 	(change.settings.languageServerExample || defaultSettings)
-        // );
-    }
-
-    // Revalidate all open text documents
-    // documents.all().forEach(validateTextDocument);
+         documents.all().forEach(validateTextDocument);
 });
 
 // function getDocumentSettings(resource: string): Thenable<ExampleSettings> {
@@ -251,10 +242,10 @@ documents.onDidChangeContent(change => {
         }
         if (!platformsChanged && preprocessor && preprocessor.originalFiles) {
 
-            if (ext == '.tpr') {
+            //if (ext == '.tpr') {
                 platformsChanged = true;
                 needsUpdate = true;
-            }
+            //}
         }
 
         if (platformsChanged) {
@@ -271,11 +262,7 @@ documents.onDidChangeContent(change => {
 
 function validateTextDocument() {
 
-    // In this simple example we get the settings for every validate run.
-    // let settings = await getDocumentSettings(textDocument.uri);
-
-    // The validator creates diagnostics for all uppercase words length 2 and more
-    // let problems = 0;
+ 
     let updated = false;
     for (const key in fileEdits) {
         updated = true;
@@ -283,23 +270,16 @@ function validateTextDocument() {
 
         const text = fileEdits[key];
         const dirName = path.dirname(currentFilePath);
-        const tmpPreprocessor1 = new TibboBasicPreprocessor(workspaceRoot, PLATFORMS_PATH);
-        const tmpPreprocessor2 = new TibboBasicPreprocessor(workspaceRoot, PLATFORMS_PATH);
-        tmpPreprocessor1.originalFiles[currentFilePath] = preprocessor.originalFiles[currentFilePath];
-        tmpPreprocessor2.originalFiles[currentFilePath] = text;
-        //tmpPreprocessor1.parseFile(dirName, path.basename(currentFilePath), true);
-        //tmpPreprocessor2.parseFile(dirName, path.basename(currentFilePath), true);
-
-        //if (JSON.stringify(tmpPreprocessor1.defines) != JSON.stringify(tmpPreprocessor2.defines)) {
+        
+        
         needsUpdate = true;
         preprocessor.originalFiles[currentFilePath] = text;
-        // }
+      
         delete fileEdits[key];
-        if (!needsUpdate) {
+       
             preprocessor.originalFiles[currentFilePath] = text;
-            //preprocessor.parseFile(dirName, path.basename(currentFilePath), true);
             projectParser.parseFile(currentFilePath, text);
-        }
+        
     }
 
     if (updated) {
@@ -352,14 +332,14 @@ function validateTextDocument() {
                 
                 preprocessor.files[filePath] = fs.readFileSync(filePath, 'utf-8')
                 const fileContents = preprocessor.files[filePath];
-                console.log("ext",ext,"filePath",filePath)
+                //console.log("ext",ext,"filePath",filePath)
                 //console.log(fileContents)
                 projectParser.parseFile(filePath, fileContents);
             }
 
         })
         projectParser.constructComments();
-
+        //notifyDiagnostics();
 
     }
     catch (ex) {
@@ -370,7 +350,7 @@ function validateTextDocument() {
         needsUpdate = false;
         const timeEnd = new Date().getTime();
         const secondsElapsed = (timeEnd - timeStart) / 1000;
-        notifyDiagnostics();
+        //notifyDiagnostics();
         connection.console.log(`parsed in ${secondsElapsed} s`);
     }
 }
@@ -1344,11 +1324,12 @@ function parseFile(fileUri: string) {
 }
 
 function notifyDiagnostics() {
+    
     for (const filePath in preprocessor.files) {
 
 
         const fileURI = getFileUrl(filePath);
-        const diagnostics: Diagnostic[] = [];
+        let diagnostics: Diagnostic[] = [];
         if (projectParser.errors[filePath] != undefined) {
             for (let i = 0; i < projectParser.errors[filePath].length; i++) {
 
@@ -1375,9 +1356,9 @@ function notifyDiagnostics() {
                 ];
                 diagnostics.push(diagnostic);
             }
-            // connection.sendDiagnostics({ uri: fileURI, diagnostics });
-        }
 
+        }
+        
         for (let i = 0; i < projectParser.variables.length; i++) {
             const variable = projectParser.variables[i];
             if (variable.references.length == 0) {
@@ -1385,26 +1366,26 @@ function notifyDiagnostics() {
                 if (loc.startToken.source[1].name != filePath) {
                     continue;
                 }
-                // const diagnostic: Diagnostic = {
-                //     severity: DiagnosticSeverity.Warning,
-                //     range: {
-                //         start: { line: loc.startToken.line - 1, character: loc.startToken.column },
-                //         // end: doc.positionAt(parserError.symbol.stop)
-                //         end: { line: loc.stopToken.line - 1, character: loc.stopToken.column + loc.stopToken.text.length }
-                //     },
-                //     message: `${variable.name} is not used anywhere`,
-                //     source: 'ex'
-                // };
-                // diagnostic.relatedInformation = [
-                //     {
-                //         location: {
-                //             uri: getFileUrl(filePath),
-                //             range: Object.assign({}, diagnostic.range)
-                //         },
-                //         message: `Unused variable`,
-                //     }
-                // ];
-                // diagnostics.push(diagnostic);
+                const diagnostic: Diagnostic = {
+                    severity: DiagnosticSeverity.Warning,
+                    range: {
+                        start: { line: loc.startToken.line - 1, character: loc.startToken.column },
+                        // end: doc.positionAt(parserError.symbol.stop)
+                        end: { line: loc.stopToken.line - 1, character: loc.stopToken.column + loc.stopToken.text.length }
+                    },
+                    message: `${variable.name} is not used anywhere`,
+                    source: 'ex'
+                };
+                diagnostic.relatedInformation = [
+                    {
+                        location: {
+                            uri: getFileUrl(filePath),
+                            range: Object.assign({}, diagnostic.range)
+                        },
+                        message: `Unused variable`,
+                    }
+                ];
+                diagnostics.push(diagnostic);
             }
         }
 
@@ -1437,37 +1418,17 @@ function notifyDiagnostics() {
                             message: `${funcName} is not called anywhere`,
                         }
                     ];
-                    // diagnostics.push(diagnostic);
+                    diagnostics.push(diagnostic);
                 }
-
+                
             }
         }
-
-
-        // diagnostics = [];
-        // let index = 0;
-        // const oLines = preprocessor.originalFiles[filePath].split('\n');
-        // const nLines = preprocessor.files[filePath].split('\n');
-        // const contents = preprocessor.originalFiles[filePath];
-        // for (let i = 0; i < oLines.length; i++) {
-        //     if (oLines[i] != nLines[i]) {
-        //         const range = {
-        //             start: getPosition(contents, index),
-        //             end: getPosition(contents, index + oLines[i].length)
-        //         };
-        //         diagnostics.push({
-        //             range: range,
-        //             severity: 4,
-        //             message: 'not included',
-        //             tags: [
-        //                 DiagnosticTag.Unnecessary
-        //             ]
-        //         });
-        //     }
-        //     index += oLines[i].length + 1;
-        // }
-
+        
+        
+        
+        console.log("diagnostics:",diagnostics)
         connection.sendDiagnostics({ uri: fileURI, diagnostics });
+        
     }
 }
 

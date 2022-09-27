@@ -16,9 +16,9 @@ const TibboBasicPreprocessorParserListener = require('../language/TibboBasic/lib
 export default class TibboBasicPreprocessor {
 
     projectPath: string;
-    platformType: string;
-    platformsPath: string;
-    platformVersion: string;
+    // platformType: string;
+    // platformsPath: string;
+    // platformVersion: string;
 
     defines: { [name: string]: TBDefine } = {};
     codes: { [filename: string]: Array<TerminalNodeImpl> } = {};
@@ -35,10 +35,10 @@ export default class TibboBasicPreprocessor {
                 tprPath = path.join(projectPath, file);
             }
         });
-        const tpr = ini.parse(fs.readFileSync(tprPath, 'utf-8'));
-        this.platformType = tpr['project']['platform'];
-        this.platformsPath = platformsPath;
-        this.platformVersion = tpr['project']['src_lib_ver'];
+        // const tpr = ini.parse(fs.readFileSync(tprPath, 'utf-8'));
+        // this.platformType = tpr['project']['platform'];
+        // this.platformsPath = platformsPath;
+        // this.platformVersion = tpr['project']['src_lib_ver'];
     }
 
     parsePlatforms(): void {
@@ -50,19 +50,19 @@ export default class TibboBasicPreprocessor {
     }
 
     getFilePath(currentDirectory: string, filePath: string): string {
-        const platformLibs = path.join(this.platformsPath, 'src', this.platformVersion);
-        if (fs.existsSync(path.join(platformLibs, filePath.toLowerCase()))) {
-            filePath = filePath.toLowerCase();
-        }
+        // const platformLibs = path.join(this.platformsPath, 'src', this.platformVersion);
+        // if (fs.existsSync(path.join(platformLibs, filePath.toLowerCase()))) {
+        //     filePath = filePath.toLowerCase();
+        // }
         if (fs.existsSync(path.join(this.projectPath, filePath.toLowerCase()))) {
             filePath = filePath.toLowerCase();
         }
         if (fs.existsSync(path.join(currentDirectory, filePath.toLowerCase()))) {
             filePath = filePath.toLowerCase();
         }
-        if (fs.existsSync(path.join(platformLibs, filePath))) {//check platforms path
-            filePath = path.join(platformLibs, filePath);
-        }
+        // if (fs.existsSync(path.join(platformLibs, filePath))) {//check platforms path
+        //     filePath = path.join(platformLibs, filePath);
+        // }
         else if (fs.existsSync(path.join(this.projectPath, filePath))) {
             filePath = path.join(this.projectPath, filePath);
         }
@@ -72,42 +72,42 @@ export default class TibboBasicPreprocessor {
         return filePath;
     }
 
-    // parseFile(currentDirectory: string, filePath: string, update = false): string {
-    //     filePath = this.getFilePath(currentDirectory, filePath);
-    //     if (this.files[filePath] && !update) {
-    //         return filePath;
-    //     }
-    //     let deviceRootFile = '';
-    //     if (this.originalFiles[filePath] == undefined) {
-    //         this.filePriorities.push(filePath);
-    //         deviceRootFile = fs.readFileSync(filePath, 'utf-8');
-    //         this.originalFiles[filePath] = deviceRootFile;
-    //     }
-    //     deviceRootFile = this.originalFiles[filePath];
-    //     const chars = new antlr4.InputStream(deviceRootFile);
-    //     chars.name = filePath;
-    //     let blankFile = this.originalFiles[filePath];
-    //     blankFile = blankFile.replace(/[^\r\n\t]/g, ' ');
-    //     this.files[filePath] = blankFile;
-    //     this.codes[filePath] = [];
-    //     //const lexer = new TibboBasicPreprocessorLexer(chars);
-    //     //const tokens = new antlr4.CommonTokenStream(lexer);
-    //     //const parser = new TibboBasicPreprocessorParser(tokens);
-    //     //parser.buildParseTrees = true;
-    //     const errorListener = new TibboBasicErrorListener();
-    //     //lexer.removeErrorListeners();
-    //     // lexer.addErrorListener(errorListener);
-    //     //parser.removeErrorListeners();
-    //     //parser.addErrorListener(errorListener);
-    //     //const tree = parser.preprocessor();
+    parseFile(currentDirectory: string, filePath: string, update = false): string {
+        filePath = this.getFilePath(currentDirectory, filePath);
+        if (this.files[filePath] && !update) {
+            return filePath;
+        }
+        let deviceRootFile = '';
+        if (this.originalFiles[filePath] == undefined) {
+            this.filePriorities.push(filePath);
+            deviceRootFile = fs.readFileSync(filePath, 'utf-8');
+            this.originalFiles[filePath] = deviceRootFile;
+        }
+        deviceRootFile = this.originalFiles[filePath];
+        const chars = new antlr4.InputStream(deviceRootFile);
+        chars.name = filePath;
+        let blankFile = this.originalFiles[filePath];
+        blankFile = blankFile.replace(/[^\r\n\t]/g, ' ');
+        this.files[filePath] = blankFile;
+        this.codes[filePath] = [];
+        const lexer = new TibboBasicPreprocessorLexer(chars);
+        const tokens = new antlr4.CommonTokenStream(lexer);
+        const parser = new TibboBasicPreprocessorParser(tokens);
+        parser.buildParseTrees = true;
+        const errorListener = new TibboBasicErrorListener();
+        lexer.removeErrorListeners();
+        lexer.addErrorListener(errorListener);
+        parser.removeErrorListeners();
+        parser.addErrorListener(errorListener);
+        const tree = parser.preprocessor();
 
-    //     const preprocessor = new PreprocessorListener(filePath, this, chars);
-    //     //antlr4.tree.ParseTreeWalker.DEFAULT.walk(preprocessor, tree);
-    //     if (errorListener.errors.length > 0) {
-    //         // console.log(errorListener.errors);
-    //     }
-    //     return filePath;
-    // }
+        const preprocessor = new PreprocessorListener(filePath, this, chars);
+        //antlr4.tree.ParseTreeWalker.DEFAULT.walk(preprocessor, tree);
+        if (errorListener.errors.length > 0) {
+            // console.log(errorListener.errors);
+        }
+        return filePath;
+    }
 }
 
 interface PreprocessorEvaluationBlock {

@@ -70,7 +70,7 @@ export default class TibboBasicTranspiler {
         parser.buildParseTrees = true;
         const errorListener = new TibboBasicErrorListener();
         lexer.removeErrorListeners();
-        // lexer.addErrorListener(errorListener);
+        lexer.addErrorListener(errorListener);
         parser.removeErrorListeners();
         parser.addErrorListener(errorListener);
         const tree = parser.startRule();
