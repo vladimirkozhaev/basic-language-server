@@ -31,6 +31,8 @@ import {
     DiagnosticTag
 } from 'vscode-languageserver';
 
+import * as vscode from "vscode";
+
 import {
     createConnection,
 } from 'vscode-languageserver/node';
@@ -93,8 +95,9 @@ const PROJECT_EXPLORER_LIBRARIES = 'Libraries';
 const PROJECT_EXPLORER_PLATFORM = 'Platform';
 
 let rootItems: ProjectExplorerItem[] = [];
-
+let firstUpdate: boolean = true;
 connection.onInitialize(async (params: InitializeParams) => {
+
     const capabilities = params.capabilities;
     if (params.rootPath) {
         workspaceRoot = params.rootPath;
@@ -117,22 +120,32 @@ connection.onInitialize(async (params: InitializeParams) => {
         }
     }
 
-    // if (workspaceRoot) {
-    //     fs.readdirSync(workspaceRoot).forEach(file => {
-    //         const ext = path.extname(file);
-    //         if (ext == '.tpr') {
-    //             if (workspaceRoot) {
-    //                 tprPath = path.join(workspaceRoot, file);
-    //             }
-    //         }
-    //     });
-    // }
+    //if (workspaceRoot) {
+    fs.readdirSync(workspaceRoot).forEach(file => {
+        
+        const ext = path.extname(file);
+        if (supportedFileTypes.indexOf(ext) >= 0) {
+
+            let pathToFile = path.join(workspaceRoot, file);
+            let fileText = fs.readFileSync(pathToFile, 'utf8');
+            //if (preprocessor.originalFiles[pathToFile] != text) {
+            fileEdits[pathToFile] = fileText;
+            platformsChanged = true;
+            needsUpdate = true;
+            //}
+        }
+    });
+    
+    //}
     // if (tprPath == '') {
     //     return {
     //         capabilities: {
     //         }
     //     };
     // }
+    //console.log(" ---------------- on Initialize")
+
+    //documents.keys().forEach(key=>console.log("open document:",key))
 
     await new Promise<void>((resolve, reject) => {
         preprocessor = new TibboBasicPreprocessor(workspaceRoot, PLATFORMS_PATH);
@@ -145,7 +158,7 @@ connection.onInitialize(async (params: InitializeParams) => {
             resolve();
         });
     }, VALIDATE_INTERVAL);
-    validateTextDocument();
+    //validateTextDocument();
 
     return {
         capabilities: {
@@ -179,6 +192,7 @@ connection.onInitialize(async (params: InitializeParams) => {
 });
 
 connection.onInitialized(async (params) => {
+
     if (hasConfigurationCapability) {
         // Register for all configuration changes.
         connection.client.register(DidChangeConfigurationNotification.type, undefined);
@@ -206,9 +220,13 @@ connection.onInitialized(async (params) => {
 // let documentSettings: Map<string, Thenable<ExampleSettings>> = new Map();
 
 connection.onDidChangeConfiguration(change => {
-         documents.all().forEach(validateTextDocument);
+    //console.log(" ---------------- onDidChangeConfiguration")
+    //documents.keys().forEach(key=>console.log("open document:",key))
 });
 
+connection.onDidOpenTextDocument(doc => {
+    //console.log("------------------ open text document:"+doc)
+})
 // function getDocumentSettings(resource: string): Thenable<ExampleSettings> {
 // 	if (!hasConfigurationCapability) {
 // 		return Promise.resolve(globalSettings);
@@ -243,8 +261,8 @@ documents.onDidChangeContent(change => {
         if (!platformsChanged && preprocessor && preprocessor.originalFiles) {
 
             //if (ext == '.tpr') {
-                platformsChanged = true;
-                needsUpdate = true;
+            platformsChanged = true;
+            needsUpdate = true;
             //}
         }
 
@@ -262,31 +280,34 @@ documents.onDidChangeContent(change => {
 
 function validateTextDocument() {
 
- 
     let updated = false;
     for (const key in fileEdits) {
+        //if (!updated){
+       // console.log("============== key",key)
+        //}
         updated = true;
         const currentFilePath = key;
 
         const text = fileEdits[key];
         const dirName = path.dirname(currentFilePath);
-        
-        
+
+
         needsUpdate = true;
         preprocessor.originalFiles[currentFilePath] = text;
-      
+        preprocessor.files[currentFilePath] = text;
         delete fileEdits[key];
+
        
-            preprocessor.originalFiles[currentFilePath] = text;
-            projectParser.parseFile(currentFilePath, text);
-        
+        projectParser.parseFile(currentFilePath, text);
+
     }
 
-    if (updated) {
+    if (updated || firstUpdate) {
         notifyDiagnostics();
         getProjectStructure();
         projectParser.constructComments();
     }
+    firstUpdate = false;
     if (parsing || !needsUpdate) {
         return;
     }
@@ -306,7 +327,7 @@ function validateTextDocument() {
             platformsChanged = false;
         }
 
-        copyProperties();
+        //copyProperties();
 
         //parse tpr file
         //const tpr = ini.parse(fs.readFileSync(tprPath, 'utf-8'));
@@ -318,18 +339,18 @@ function validateTextDocument() {
         fs.readdirSync(dirName).forEach(file => {
             //console.log(file);
             const filePath = path.join(dirName, file)
-            
+
             //const entryName = 'file' + i.toString();
             //if (tpr[entryName] != undefined) {
             //const originalFilePath = tpr[entryName]['path'].split('\\').join(path.sep);
             // let filePath = originalFilePath;
 
             const ext = path.extname(file);
-           
+
             if (supportedFileTypes.includes(ext)) {
 
                 let directory = dirName;
-                
+
                 preprocessor.files[filePath] = fs.readFileSync(filePath, 'utf-8')
                 const fileContents = preprocessor.files[filePath];
                 //console.log("ext",ext,"filePath",filePath)
@@ -357,7 +378,7 @@ function validateTextDocument() {
 
 connection.onDidChangeWatchedFiles(_change => {
     // Monitored files have change in VSCode
-    // connection.console.log('We received an file change event');
+    connection.console.log('We received an file change event');
 });
 
 connection.onDocumentFormatting(formatParams => {
@@ -1313,7 +1334,7 @@ function parseFile(fileUri: string) {
     const text = doc.getText();
     const currentFilePath = getFileName(fileUri);
     preprocessor.originalFiles[currentFilePath] = text;
-    preprocessor.files[currentFilePath] = '';
+    //preprocessor.files[currentFilePath] = '';
 
     const filePath = getFileName(fileUri);
     const dirName = path.dirname(filePath);
@@ -1324,17 +1345,17 @@ function parseFile(fileUri: string) {
 }
 
 function notifyDiagnostics() {
-    
     for (const filePath in preprocessor.files) {
-
-
-        const fileURI = getFileUrl(filePath);
+        
+        
         let diagnostics: Diagnostic[] = [];
+        const fileURI = getFileUrl(filePath);
         if (projectParser.errors[filePath] != undefined) {
+            //console.log("---- preprocessor.files:",filePath)
             for (let i = 0; i < projectParser.errors[filePath].length; i++) {
 
                 const parserError = projectParser.errors[filePath][i];
-                console.log("parserError.symbol:",parserError.symbol)
+                //console.log("parserError.symbol:",parserError.symbol)
                 const diagnostic: Diagnostic = {
                     severity: DiagnosticSeverity.Error,
                     range: {
@@ -1358,7 +1379,7 @@ function notifyDiagnostics() {
             }
 
         }
-        
+
         for (let i = 0; i < projectParser.variables.length; i++) {
             const variable = projectParser.variables[i];
             if (variable.references.length == 0) {
@@ -1420,16 +1441,20 @@ function notifyDiagnostics() {
                     ];
                     diagnostics.push(diagnostic);
                 }
-                
+
             }
         }
-        
-        
-        
-        console.log("diagnostics:",diagnostics)
+
+
+
+        //diagnostics=diagnostics.splice(0,1)
+        //console.log("diagnostics:",diagnostics)
+
         connection.sendDiagnostics({ uri: fileURI, diagnostics });
-        
+
     }
+
+    console.log("no")
 }
 
 function copyProperties() {
@@ -1441,7 +1466,7 @@ function copyProperties() {
     projectParser.objects = platformProjectParser.objects;
     projectParser.syscalls = platformProjectParser.syscalls;
     projectParser.events = platformProjectParser.events;
-    projectParser.errors = platformProjectParser.errors;
+    //projectParser.errors = platformProjectParser.errors;
 
     const props = ['tokens', 'trees', 'events', 'enums', 'functions',
         'subs', 'consts', 'types'];

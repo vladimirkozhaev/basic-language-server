@@ -31,8 +31,8 @@ export default class TibboBasicErrorListener extends antlr4.error.ErrorListener 
 	 * @param {string} payload Stack trace
 	 */
 	syntaxError(recognizer: object, symbol: CommonToken, line: number, column: number, message: string, payload: string) {
-		console.log("------------- symbol:", symbol);
+		
 		this.errors.push({ symbol, line, column, message });
-		//console.log("add error")
+		
 	}
 }
